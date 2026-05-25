@@ -4,6 +4,7 @@ backend/data/
 backend/logs/
 backend/vendor/
 *.exe
+*.exe~
 *.test
 
 # Python

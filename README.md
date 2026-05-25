@@ -117,7 +117,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-访问 `http://localhost:80`
+访问 `http://localhost:3000`
 
 默认管理员账号：`admin` / `admin123`
 
