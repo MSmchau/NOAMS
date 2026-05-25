@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.example
+node_modules
+frontend/node_modules
+frontend/dist
+backend/data
+backend/logs
+backend/noams.exe
+netmiko-worker/venv
+NOAMS实施文档.md
