@@ -70,11 +70,13 @@ func InitConfig() {
 	viper.SetEnvPrefix("NOAMS")
 
 	viper.BindEnv("server.port", "NOAMS_SERVER_PORT")
+	viper.BindEnv("database.driver", "NOAMS_DB_DRIVER")
 	viper.BindEnv("database.host", "NOAMS_DB_HOST")
 	viper.BindEnv("database.port", "NOAMS_DB_PORT")
 	viper.BindEnv("database.user", "NOAMS_DB_USER")
 	viper.BindEnv("database.password", "NOAMS_DB_PASSWORD")
 	viper.BindEnv("database.dbname", "NOAMS_DB_NAME")
+	viper.BindEnv("database.dsn", "NOAMS_DB_DSN")
 	viper.BindEnv("redis.addr", "NOAMS_REDIS_ADDR")
 	viper.BindEnv("redis.password", "NOAMS_REDIS_PASSWORD")
 	viper.BindEnv("jwt.secret", "NOAMS_JWT_SECRET")

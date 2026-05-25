@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.exe
+*.exe~
+*.test
+data/
+logs/
+vendor/
+README.md
+NOAMS实施文档.md
