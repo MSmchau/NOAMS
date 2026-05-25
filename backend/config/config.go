@@ -10,10 +10,11 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	JWT      JWTConfig
-	Netmiko  NetmikoConfig
-	Oxidized OxidizedConfig
-	Monitor  MonitorConfig
-	Log      LogConfig
+	Netmiko    NetmikoConfig
+	Oxidized   OxidizedConfig
+	Monitor    MonitorConfig
+	Inspection InspectionConfig
+	Log        LogConfig
 }
 
 type MonitorConfig struct {
@@ -22,6 +23,10 @@ type MonitorConfig struct {
 	PingRetry    int    // 重试次数
 	PingMethod   string // 检测方式：tcp/icmp
 	Concurrency  int    // 最大并发检测数
+}
+
+type InspectionConfig struct {
+	Interval int // 巡检任务处理间隔（秒）
 }
 
 type ServerConfig struct {
@@ -110,6 +115,8 @@ func InitConfig() {
 	viper.SetDefault("monitor.ping_method", "tcp")
 	viper.SetDefault("monitor.concurrency", 50)
 
+	viper.SetDefault("inspection.interval", 10)
+
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.filename", "logs/app.log")
 	viper.SetDefault("log.max_size", 100)
@@ -158,6 +165,9 @@ func InitConfig() {
 			PingRetry:    viper.GetInt("monitor.ping_retry"),
 			PingMethod:   viper.GetString("monitor.ping_method"),
 			Concurrency:  viper.GetInt("monitor.concurrency"),
+		},
+		Inspection: InspectionConfig{
+			Interval: viper.GetInt("inspection.interval"),
 		},
 		Log: LogConfig{
 			Level:     viper.GetString("log.level"),

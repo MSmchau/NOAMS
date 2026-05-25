@@ -36,6 +36,7 @@ func main() {
 	r.Use(middleware.CORSMiddleware(config.AppConfig.Server.CorsOrigins))
 
 	pinger := startPinger(db)
+	startInspector(db)
 	routes.Setup(r, db, pinger)
 
 	port := config.AppConfig.Server.Port
@@ -172,6 +173,22 @@ func initJWT() {
 		zap.L().Warn("using default JWT secret, please set NOAMS_JWT_SECRET in production")
 	}
 	utils.JWTSecret = []byte(secret)
+}
+
+func startInspector(db *gorm.DB) {
+	workerURL := config.AppConfig.Netmiko.WorkerURL
+	if workerURL == "" {
+		zap.L().Warn("netmiko worker URL 未配置，巡检功能不可用")
+		return
+	}
+
+	inspector := services.NewInspector(db, services.InspectorConfig{
+		Interval:  time.Duration(config.AppConfig.Inspection.Interval) * time.Second,
+		WorkerURL: workerURL,
+	})
+	ctx := context.Background()
+	go inspector.Start(ctx)
+	zap.L().Info("巡检任务处理服务已启动", zap.String("worker_url", workerURL))
 }
 
 func startPinger(db *gorm.DB) *services.Pinger {
