@@ -98,6 +98,11 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 创建后立即检测一次设备状态，无需等待后台 pinger
+	if h.pinger != nil {
+		h.pinger.PingDevice(&device)
+	}
+
 	utils.Success(c, device)
 }
 
