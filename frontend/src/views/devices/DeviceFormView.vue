@@ -1,9 +1,7 @@
 <template>
   <div class="device-form">
-    <el-card shadow="hover">
-      <template #header>
-        <span>{{ isEdit ? '编辑设备' : '添加设备' }}</span>
-      </template>
+    <div class="form-card">
+      <div class="form-header">{{ isEdit ? '编辑设备' : '添加设备' }}</div>
 
       <el-form
         ref="formRef"
@@ -83,7 +81,7 @@
           <el-button @click="handleCancel">取消</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -182,3 +180,21 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.form-card {
+  padding: 24px;
+  background: rgba(26, 35, 59, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 212, 255, 0.06);
+  border-radius: 12px;
+}
+.form-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.06);
+}
+</style>

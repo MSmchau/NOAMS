@@ -1,0 +1,308 @@
+@use './variables.scss' as *;
+
+// === Reset & Base ===
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: $bg-primary;
+  color: $text-primary;
+  -webkit-font-smoothing: antialiased;
+}
+
+// === Custom Scrollbar ===
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.15);
+  border-radius: 3px;
+  &:hover { background: rgba(0, 212, 255, 0.3); }
+}
+
+// === Element Plus Override ===
+.el-card {
+  background: $bg-card !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid $border-color !important;
+  border-radius: $radius !important;
+  box-shadow: $shadow-card !important;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: $border-glow !important;
+    box-shadow: $shadow-glow !important;
+  }
+
+  .el-card__header {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid $border-color !important;
+    color: $text-primary;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .el-card__body {
+    padding: 20px !important;
+  }
+}
+
+.el-table {
+  --el-table-bg-color: transparent !important;
+  --el-table-tr-bg-color: transparent !important;
+  --el-table-row-hover-bg-color: rgba(0, 212, 255, 0.04) !important;
+  --el-table-border-color: $border-color !important;
+  --el-table-text-color: $text-primary !important;
+  --el-table-header-bg-color: rgba(0, 0, 0, 0.2) !important;
+  --el-table-header-text-color: $text-secondary !important;
+
+  background: transparent !important;
+  color: $text-primary !important;
+
+  th.el-table__cell {
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  td.el-table__cell {
+    border-bottom: 1px solid $border-color !important;
+  }
+
+  .el-table__body tr:hover > td {
+    background-color: rgba(0, 212, 255, 0.04) !important;
+  }
+
+  .el-table__inner-wrapper::before {
+    display: none !important;
+  }
+}
+
+.el-pagination {
+  --el-pagination-text-color: $text-secondary !important;
+  --el-pagination-hover-color: $cyan !important;
+  --el-pagination-button-bg-color: transparent !important;
+  --el-pagination-button-hover-bg-color: rgba(0, 212, 255, 0.1) !important;
+
+  button, .el-pager li {
+    background: transparent !important;
+    color: $text-secondary !important;
+    border-radius: $radius-sm !important;
+    &:hover { color: $cyan !important; background: rgba(0, 212, 255, 0.08) !important; }
+    &.is-active { color: $cyan !important; font-weight: 600; }
+  }
+}
+
+.el-form-item__label {
+  color: $text-secondary !important;
+  font-weight: 500 !important;
+}
+
+.el-input, .el-select, .el-textarea {
+  --el-input-bg-color: rgba(0, 0, 0, 0.3) !important;
+  --el-input-border-color: $border-color !important;
+  --el-input-text-color: $text-primary !important;
+  --el-input-placeholder-color: $text-muted !important;
+  --el-input-hover-border-color: $cyan !important;
+  --el-input-focus-border-color: $cyan !important;
+  --el-select-input-focus-border-color: $cyan !important;
+  --el-select-border-color-hover: $cyan !important;
+
+  .el-input__wrapper {
+    background: rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 0 0 1px $border-color inset !important;
+    border-radius: $radius-sm !important;
+    transition: all 0.3s ease;
+    &:hover { box-shadow: 0 0 0 1px $cyan-glow inset !important; }
+    &.is-focus { box-shadow: 0 0 0 1px $cyan inset !important; }
+    input { color: $text-primary !important; }
+    .el-input__icon { color: $text-muted !important; }
+  }
+}
+
+.el-button {
+  border-radius: $radius-sm !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease !important;
+
+  &.el-button--primary {
+    --el-button-bg-color: #{$cyan} !important;
+    --el-button-border-color: #{$cyan} !important;
+    --el-button-hover-bg-color: #{rgba(0, 212, 255, 0.85)} !important;
+    --el-button-hover-border-color: #{rgba(0, 212, 255, 0.85)} !important;
+    --el-button-text-color: #0a0e17 !important;
+    font-weight: 600 !important;
+  }
+
+  &.el-button--success {
+    --el-button-bg-color: #{$teal} !important;
+    --el-button-border-color: #{$teal} !important;
+  }
+
+  &.el-button--danger {
+    --el-button-bg-color: #{$bg-card} !important;
+    --el-button-border-color: rgba(239, 68, 68, 0.3) !important;
+    --el-button-hover-bg-color: rgba(239, 68, 68, 0.15) !important;
+    --el-button-hover-border-color: #ef4444 !important;
+    --el-button-text-color: #ef4444 !important;
+  }
+
+  &.is-link {
+    color: $cyan !important;
+    &:hover { opacity: 0.8; }
+  }
+}
+
+.el-tag {
+  --el-tag-border-radius: 4px !important;
+  --el-tag-font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  border: 1px solid !important;
+  font-weight: 500 !important;
+  padding: 0 8px !important;
+
+  &.el-tag--success { border-color: rgba(16, 185, 129, 0.3) !important; }
+  &.el-tag--danger { border-color: rgba(239, 68, 68, 0.3) !important; }
+  &.el-tag--warning { border-color: rgba(245, 158, 11, 0.3) !important; }
+  &.el-tag--info { border-color: rgba(100, 116, 139, 0.3) !important; }
+}
+
+.el-statistic {
+  --el-statistic-title-color: $text-muted !important;
+  --el-statistic-content-color: $text-primary !important;
+}
+
+.el-descriptions {
+  --el-descriptions-table-border-color: $border-color !important;
+  --el-descriptions-title-color: $text-primary !important;
+  --el-descriptions-label-bg-color: rgba(0, 0, 0, 0.2) !important;
+  --el-descriptions-item-label-text-color: $text-secondary !important;
+  --el-descriptions-item-content-text-color: $text-primary !important;
+}
+
+.el-dropdown-menu {
+  background: $bg-card !important;
+  border: 1px solid $border-color !important;
+  backdrop-filter: blur(16px) !important;
+  .el-dropdown-menu__item {
+    color: $text-secondary !important;
+    &:hover { background: rgba(0, 212, 255, 0.08) !important; color: $cyan !important; }
+  }
+}
+
+.el-progress {
+  --el-progress-text-color: $text-secondary !important;
+  .el-progress-bar__outer { background: rgba(255, 255, 255, 0.05) !important; }
+}
+
+.el-empty {
+  --el-empty-fill-color-0: rgba(0, 212, 255, 0.05) !important;
+  --el-empty-fill-color-1: rgba(0, 0, 0, 0) !important;
+  --el-empty-fill-color-2: rgba(0, 212, 255, 0.02) !important;
+  --el-empty-fill-color-3: rgba(0, 212, 255, 0.03) !important;
+  --el-empty-fill-color-4: rgba(0, 212, 255, 0.04) !important;
+  --el-empty-fill-color-5: rgba(0, 212, 255, 0.05) !important;
+  --el-empty-fill-color-6: rgba(0, 212, 255, 0.06) !important;
+  --el-empty-fill-color-7: rgba(0, 212, 255, 0.07) !important;
+  --el-empty-fill-color-8: rgba(0, 212, 255, 0.08) !important;
+  --el-empty-fill-color-9: rgba(0, 212, 255, 0.09) !important;
+  --el-empty-fill-color-ddd: rgba(0, 212, 255, 0.1) !important;
+  .el-empty__description p { color: $text-muted !important; }
+}
+
+.el-message {
+  background: $bg-card !important;
+  border: 1px solid $border-color !important;
+  backdrop-filter: blur(16px) !important;
+  color: $text-primary !important;
+}
+
+.el-message-box {
+  background: $bg-card !important;
+  border: 1px solid $border-color !important;
+  backdrop-filter: blur(24px) !important;
+  .el-message-box__title { color: $text-primary !important; }
+  .el-message-box__content { color: $text-secondary !important; }
+  .el-message-box__btns button { border-radius: $radius-sm !important; }
+}
+
+.el-switch {
+  --el-switch-on-color: #{$cyan} !important;
+  --el-switch-off-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.el-breadcrumb {
+  --el-breadcrumb-text-color: $text-secondary !important;
+  --el-breadcrumb-item-color: $text-muted !important;
+  --el-breadcrumb-item-hover-color: $cyan !important;
+}
+
+.el-alert {
+  border-radius: $radius-sm !important;
+}
+
+.el-link.el-link--primary {
+  --el-link-text-color: #{$cyan} !important;
+  --el-link-hover-text-color: #{rgba(0, 212, 255, 0.8)} !important;
+}
+
+// === Common Utility Classes ===
+.tech-stat {
+  padding: 4px 0;
+
+  .stat-label {
+    font-size: 12px;
+    color: $text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: $text-primary;
+    line-height: 1.2;
+  }
+
+  .stat-unit {
+    font-size: 12px;
+    color: $text-muted;
+    margin-left: 2px;
+    font-weight: 400;
+  }
+}
+
+.tech-gradient-text {
+  @include text-gradient;
+}
+
+.tech-card-glass {
+  @include glass;
+  border-radius: $radius;
+  box-shadow: $shadow-card;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: $border-glow;
+    box-shadow: $shadow-glow;
+  }
+}
+
+.tech-monospace {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  letter-spacing: 0;
+}
