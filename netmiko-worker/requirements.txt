@@ -1,0 +1,4 @@
+flask>=3.0
+netmiko>=4.7.0
+gunicorn>=21.2.0
+textfsm>=1.1.3

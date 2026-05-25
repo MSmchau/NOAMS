@@ -1,0 +1,35 @@
+# Go
+backend/noams.exe
+backend/data/
+backend/logs/
+backend/vendor/
+*.exe
+*.test
+
+# Python
+netmiko-worker/venv/
+netmiko-worker/__pycache__/
+*.pyc
+*.pyo
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/auto-imports.d.ts
+frontend/components.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Docker
+oxidized/configs/
