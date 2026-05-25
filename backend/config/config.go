@@ -12,7 +12,16 @@ type Config struct {
 	JWT      JWTConfig
 	Netmiko  NetmikoConfig
 	Oxidized OxidizedConfig
+	Monitor  MonitorConfig
 	Log      LogConfig
+}
+
+type MonitorConfig struct {
+	PingInterval int    // 检测间隔（秒）
+	PingTimeout  int    // 单次超时（秒）
+	PingRetry    int    // 重试次数
+	PingMethod   string // 检测方式：tcp/icmp
+	Concurrency  int    // 最大并发检测数
 }
 
 type ServerConfig struct {
@@ -95,6 +104,12 @@ func InitConfig() {
 	viper.SetDefault("redis.addr", "127.0.0.1:6379")
 	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("jwt.expire_hour", 24)
+	viper.SetDefault("monitor.ping_interval", 300)
+	viper.SetDefault("monitor.ping_timeout", 3)
+	viper.SetDefault("monitor.ping_retry", 1)
+	viper.SetDefault("monitor.ping_method", "tcp")
+	viper.SetDefault("monitor.concurrency", 50)
+
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.filename", "logs/app.log")
 	viper.SetDefault("log.max_size", 100)
@@ -136,6 +151,13 @@ func InitConfig() {
 		},
 		Oxidized: OxidizedConfig{
 			APIURL: viper.GetString("oxidized.api_url"),
+		},
+		Monitor: MonitorConfig{
+			PingInterval: viper.GetInt("monitor.ping_interval"),
+			PingTimeout:  viper.GetInt("monitor.ping_timeout"),
+			PingRetry:    viper.GetInt("monitor.ping_retry"),
+			PingMethod:   viper.GetString("monitor.ping_method"),
+			Concurrency:  viper.GetInt("monitor.concurrency"),
 		},
 		Log: LogConfig{
 			Level:     viper.GetString("log.level"),

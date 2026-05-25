@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strconv"
+	"time"
 
 	"noams/middleware"
 	"noams/models"
@@ -13,10 +14,14 @@ import (
 
 type DeviceHandler struct {
 	deviceService *services.DeviceService
+	pinger        *services.Pinger
 }
 
-func NewDeviceHandler(deviceService *services.DeviceService) *DeviceHandler {
-	return &DeviceHandler{deviceService: deviceService}
+func NewDeviceHandler(deviceService *services.DeviceService, pinger *services.Pinger) *DeviceHandler {
+	return &DeviceHandler{
+		deviceService: deviceService,
+		pinger:        pinger,
+	}
 }
 
 func (h *DeviceHandler) List(c *gin.Context) {
@@ -130,6 +135,39 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 	}
 
 	utils.Success(c, gin.H{"id": id})
+}
+
+// Ping 手动检测单个设备的在线状态
+func (h *DeviceHandler) Ping(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		utils.BadRequest(c, "invalid device id")
+		return
+	}
+
+	device, err := h.deviceService.GetByID(uint(id))
+	if err != nil {
+		utils.BadRequest(c, "device not found")
+		return
+	}
+
+	online := h.pinger.PingDevice(device)
+
+	status := "online"
+	statusCode := 1
+	if !online {
+		status = "offline"
+		statusCode = 0
+	}
+
+	utils.Success(c, gin.H{
+		"id":        device.ID,
+		"name":      device.Name,
+		"ip":        device.ManagementIP,
+		"status":    statusCode,
+		"status_txt": status,
+		"checked_at": time.Now().Format(time.RFC3339),
+	})
 }
 
 func (h *DeviceHandler) Stats(c *gin.Context) {

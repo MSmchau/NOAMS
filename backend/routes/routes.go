@@ -9,12 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func Setup(r *gin.Engine, db *gorm.DB) {
+func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 	authService := services.NewAuthService(db)
 	deviceService := services.NewDeviceService(db)
 
 	authHandler := handlers.NewAuthHandler(authService)
-	deviceHandler := handlers.NewDeviceHandler(deviceService)
+	deviceHandler := handlers.NewDeviceHandler(deviceService, pinger)
 	inspectionHandler := handlers.NewInspectionHandler(db)
 	configHandler := handlers.NewConfigHandler(db)
 	alertHandler := handlers.NewAlertHandler(db)
@@ -40,6 +40,7 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 		authed.GET("/devices/stats", deviceHandler.Stats)
 		authed.GET("/devices/:id", deviceHandler.Get)
 		authed.POST("/devices", deviceHandler.Create)
+			authed.GET("/devices/:id/ping", deviceHandler.Ping)
 		authed.PUT("/devices/:id", deviceHandler.Update)
 		authed.DELETE("/devices/:id", middleware.AdminRequired(), deviceHandler.Delete)
 

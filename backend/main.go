@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"time"
 
 	"noams/config"
 	"noams/middleware"
 	"noams/models"
 	"noams/routes"
+	"noams/services"
 	"noams/utils"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +35,8 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware(config.AppConfig.Server.CorsOrigins))
 
-	routes.Setup(r, db)
+	pinger := startPinger(db)
+	routes.Setup(r, db, pinger)
 
 	port := config.AppConfig.Server.Port
 	zap.L().Info("NOAMS server starting", zap.String("port", port))
@@ -168,6 +172,19 @@ func initJWT() {
 		zap.L().Warn("using default JWT secret, please set NOAMS_JWT_SECRET in production")
 	}
 	utils.JWTSecret = []byte(secret)
+}
+
+func startPinger(db *gorm.DB) *services.Pinger {
+	pinger := services.NewPinger(db, services.PingerConfig{
+		Interval:    time.Duration(config.AppConfig.Monitor.PingInterval) * time.Second,
+		Timeout:     time.Duration(config.AppConfig.Monitor.PingTimeout) * time.Second,
+		Retry:       config.AppConfig.Monitor.PingRetry,
+		Method:      config.AppConfig.Monitor.PingMethod,
+		Concurrency: config.AppConfig.Monitor.Concurrency,
+	})
+	ctx := context.Background()
+	go pinger.Start(ctx)
+	return pinger
 }
 
 func init() {
