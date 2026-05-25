@@ -1,0 +1,35 @@
+---
+username: noams
+password: noams
+model: hp_comware
+interval: 3600
+log: /root/.config/oxidized/log
+debug: false
+threads: 30
+timeout: 30
+retries: 3
+prompt: !ruby/regexp /^([\w.@-]+[#>]\s?)$/
+rest: 0.0.0.0:8888
+next_adds_job: false
+vars: {}
+groups: {}
+models: {}
+
+source:
+  default: csv
+  csv:
+    file: /root/.config/oxidized/router.db
+    delimiter: !ruby/regexp /:/
+    map:
+      name: 0
+      model: 1
+    vars_map:
+      enable: 2
+
+output:
+  default: file
+  file:
+    directory: /root/.config/oxidized/configs
+
+input:
+  default: ssh, telnet
