@@ -94,15 +94,17 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="190" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click.stop="handleDetail(row)">详情</el-button>
-            <el-button type="primary" link size="small" @click.stop="handleEdit(row)">编辑</el-button>
-            <el-popconfirm title="确认删除该设备？" @confirm="handleDelete(row)">
-              <template #reference>
-                <el-button type="danger" link size="small" @click.stop>删除</el-button>
-              </template>
-            </el-popconfirm>
+            <div class="action-cell">
+              <el-button type="primary" link size="small" @click.stop="handleDetail(row)">详情</el-button>
+              <el-button type="primary" link size="small" @click.stop="handleEdit(row)">编辑</el-button>
+              <el-popconfirm title="确认删除该设备？" @confirm="handleDelete(row)">
+                <template #reference>
+                  <el-button type="danger" link size="small" @click.stop>删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -335,6 +337,18 @@ onMounted(loadDevices)
 .toolbar-right {
   display: flex;
   gap: 8px;
+}
+
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.action-cell :deep(.el-button) {
+  padding: 0 4px;
+  margin: 0;
 }
 
 .pagination-wrap {
