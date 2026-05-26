@@ -16,7 +16,7 @@ func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 
 	authHandler := handlers.NewAuthHandler(authService)
 	credentialHandler := handlers.NewCredentialHandler(credentialService)
-	deviceHandler := handlers.NewDeviceHandler(deviceService, pinger)
+	deviceHandler := handlers.NewDeviceHandler(deviceService, db, pinger)
 	inspectionHandler := handlers.NewInspectionHandler(db)
 	configHandler := handlers.NewConfigHandler(db)
 	alertHandler := handlers.NewAlertHandler(db)

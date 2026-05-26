@@ -135,6 +135,9 @@
         <el-button size="small" type="primary" plain>选择 JSON 文件</el-button>
       </el-upload>
     </div>
+    <div style="font-size:12px;color:#8c8c8c;margin-bottom:8px;">
+      可使用 <code>credential_id</code> 引用已有凭据，或使用 <code>ssh_username</code> + <code>ssh_password</code> 自动创建。
+    </div>
     <el-input
       v-model="importJson"
       type="textarea"
@@ -147,7 +150,9 @@
     "vendor": "h3c",
     "role": "core",
     "model": "S10504",
-    "building": "中心机房"
+    "building": "中心机房",
+    "ssh_username": "admin",
+    "ssh_password": "your-password"
   }
 ]'
     />
@@ -211,13 +216,18 @@ function handleFileChange(uploadFile: { raw?: UploadRawFile }) {
 async function handleExport() {
   try {
     const res = await request.get('/devices/export', { responseType: 'blob' })
-    const url = URL.createObjectURL(new Blob([res.data]))
+    const blob = new Blob([res.data], { type: 'application/json; charset=utf-8' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `devices_${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
     link.click()
-    URL.revokeObjectURL(url)
-    ElMessage.success('导出成功')
+    // 延迟释放 URL 确保浏览器已开始下载
+    setTimeout(() => {
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }, 200)
   } catch {
     ElMessage.error('导出失败')
   }

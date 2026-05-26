@@ -10,17 +10,21 @@ import (
 	"noams/services"
 	"noams/utils"
 
+	"gorm.io/gorm"
+
 	"github.com/gin-gonic/gin"
 )
 
 type DeviceHandler struct {
 	deviceService *services.DeviceService
+	db            *gorm.DB
 	pinger        *services.Pinger
 }
 
-func NewDeviceHandler(deviceService *services.DeviceService, pinger *services.Pinger) *DeviceHandler {
+func NewDeviceHandler(deviceService *services.DeviceService, db *gorm.DB, pinger *services.Pinger) *DeviceHandler {
 	return &DeviceHandler{
 		deviceService: deviceService,
+		db:            db,
 		pinger:        pinger,
 	}
 }
@@ -216,7 +220,8 @@ func (h *DeviceHandler) ExportDevices(c *gin.Context) {
 		return
 	}
 
-	c.Header("Content-Type", "application/json")
+	// 直接返回原始 JSON 数组，导出的文件可直接用于导入
+	c.Header("Content-Type", "application/json; charset=utf-8")
 	c.Header("Content-Disposition", "attachment; filename=devices_export.json")
 	c.JSON(200, devices)
 }
@@ -233,6 +238,8 @@ func (h *DeviceHandler) ImportDevices(c *gin.Context) {
 			Model        string `json:"model"`
 			SSHPort      int    `json:"ssh_port"`
 			CredentialID *uint  `json:"credential_id"`
+			SSHUsername  string `json:"ssh_username"`
+			SSHPassword  string `json:"ssh_password"`
 			Building     string `json:"building"`
 			Floor        int    `json:"floor"`
 			APName       string `json:"ap_name"`
@@ -261,6 +268,20 @@ func (h *DeviceHandler) ImportDevices(c *gin.Context) {
 			continue
 		}
 
+		// 如果提供了 ssh_username/ssh_password 且未指定 credential_id，自动创建凭据
+		credID := d.CredentialID
+		if credID == nil && d.SSHUsername != "" && d.SSHPassword != "" {
+			cred := models.Credential{
+				Name:       fmt.Sprintf("导入凭据-%s", d.Name),
+				Username:   d.SSHUsername,
+				Password:   d.SSHPassword,
+				AuthMethod: "password",
+			}
+			if err := h.db.Create(&cred).Error; err == nil {
+				credID = &cred.ID
+			}
+		}
+
 		device := models.Device{
 			Name:          d.Name,
 			ManagementIP:  d.ManagementIP,
@@ -269,7 +290,7 @@ func (h *DeviceHandler) ImportDevices(c *gin.Context) {
 			Role:          d.Role,
 			Model:         d.Model,
 			SSHPort:       d.SSHPort,
-			CredentialID:  d.CredentialID,
+			CredentialID:  credID,
 			Building:      d.Building,
 			Floor:         d.Floor,
 			APName:        d.APName,
