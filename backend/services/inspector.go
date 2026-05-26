@@ -20,26 +20,36 @@ import (
 
 // 设备类型对应的巡检命令
 type deviceSpec struct {
-	CPUCommand    string
-	MemoryCommand string
+	CPUCommand       string
+	MemoryCommand    string
+	UptimeCommand    string
+	InterfaceCommand string
 }
 
 var deviceCommands = map[string]deviceSpec{
 	"hp_comware": {
-		CPUCommand:    "display cpu-usage",
-		MemoryCommand: "display memory",
+		CPUCommand:       "display cpu-usage",
+		MemoryCommand:    "display memory",
+		UptimeCommand:    "display version",
+		InterfaceCommand: "display interface brief",
 	},
 	"huawei": {
-		CPUCommand:    "display cpu-usage",
-		MemoryCommand: "display memory-usage",
+		CPUCommand:       "display cpu-usage",
+		MemoryCommand:    "display memory-usage",
+		UptimeCommand:    "display version",
+		InterfaceCommand: "display interface brief",
 	},
 	"cisco_ios": {
-		CPUCommand:    "show processes cpu sorted | include CPU utilization",
-		MemoryCommand: "show memory statistics",
+		CPUCommand:       "show processes cpu sorted | include CPU utilization",
+		MemoryCommand:    "show memory statistics",
+		UptimeCommand:    "show version",
+		InterfaceCommand: "show ip interface brief",
 	},
 	"ruijie_os": {
-		CPUCommand:    "show cpu",
-		MemoryCommand: "show memory",
+		CPUCommand:       "show cpu",
+		MemoryCommand:    "show memory",
+		UptimeCommand:    "show version",
+		InterfaceCommand: "show interface brief",
 	},
 }
 
@@ -138,6 +148,12 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 	if spec.MemoryCommand != "" {
 		commands = append(commands, spec.MemoryCommand)
 	}
+	if spec.UptimeCommand != "" {
+		commands = append(commands, spec.UptimeCommand)
+	}
+	if spec.InterfaceCommand != "" {
+		commands = append(commands, spec.InterfaceCommand)
+	}
 
 	startTime := time.Now()
 
@@ -168,8 +184,9 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 		return
 	}
 
-	// 解析 CPU 和内存数据
+	// 解析巡检数据
 	var cpuUsage, memoryUsage *float64
+	var uptime string
 	var rawOutputs []string
 
 	for _, r := range resp.Results {
@@ -181,12 +198,16 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 		if spec.MemoryCommand != "" && r.Command == spec.MemoryCommand {
 			memoryUsage = parseMemory(r.Output)
 		}
+		if spec.UptimeCommand != "" && r.Command == spec.UptimeCommand {
+			uptime = parseUptime(r.Output)
+		}
 	}
 
 	// 更新数据库
 	updates := map[string]interface{}{
 		"status":    "success",
 		"cpu_usage": cpuUsage,
+		"uptime":    uptime,
 		"duration":  duration,
 		"raw_output": strings.Join(rawOutputs, "\n\n"),
 	}
@@ -274,7 +295,7 @@ func parseCPU(output string) *float64 {
 
 // parseMemory 从命令输出中解析内存使用率
 func parseMemory(output string) *float64 {
-	// 1. 直接百分比： "Memory usage: 25%" 或 "memory: 25%"
+	// 1. 直接百分比： "Current memory usage: 18%"
 	re1 := regexp.MustCompile(`(?i)(?:memory|mem)\s*(?:usage|used|utilization)?[\s:\-]+(\d+(?:\.\d+)?)%`)
 	if matches := re1.FindStringSubmatch(output); len(matches) > 1 {
 		if v, err := strconv.ParseFloat(matches[1], 64); err == nil && v >= 0 && v <= 100 {
@@ -282,7 +303,7 @@ func parseMemory(output string) *float64 {
 		}
 	}
 
-	// 2. "used/total" 同行: "used: 1234, total: 6912" 或 "used 1234 total 6912"
+	// 2. "used/total" 同行: "Used: 1234, Total: 6912"
 	re2 := regexp.MustCompile(`(?i)used[\s:]+(\d+)[\s\S]{0,30}total[\s:]+(\d+)`)
 	if matches := re2.FindStringSubmatch(output); len(matches) > 2 {
 		used, _ := strconv.ParseFloat(matches[1], 64)
@@ -293,7 +314,7 @@ func parseMemory(output string) *float64 {
 		}
 	}
 
-	// 3. "Total/Used" 分行: "Total: 6912\nUsed: 1234"
+	// 3. "Total/Used" 分行
 	re3 := regexp.MustCompile(`(?i)Total[\s:]+(\d+)`)
 	re4 := regexp.MustCompile(`(?i)Used[\s:]+(\d+)`)
 	totalMatch := re3.FindStringSubmatch(output)
@@ -308,6 +329,17 @@ func parseMemory(output string) *float64 {
 	}
 
 	return nil
+}
+
+// parseUptime 从命令输出中解析系统运行时长
+func parseUptime(output string) string {
+	// 常见格式: "uptime is 45 weeks, 5 days, 3 hours, 18 minutes"
+	// "System uptime is 2 days, 1 hour, 30 minutes"
+	re := regexp.MustCompile(`(?i)(?:uptime\s+is|up\s+for)\s+(.+?)(?:\n|$)`)
+	if matches := re.FindStringSubmatch(output); len(matches) > 1 {
+		return strings.TrimSpace(matches[1])
+	}
+	return ""
 }
 
 // executeRequest 发送给 netmiko-worker 的请求结构
