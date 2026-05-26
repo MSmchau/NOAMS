@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card shadow="hover">
+    <el-card shadow="never">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>巡检记录</span>
@@ -10,7 +10,9 @@
         </div>
       </template>
       <el-table :data="inspections" v-loading="loading" stripe>
-        <el-table-column prop="device?.name" label="设备" min-width="150" />
+        <el-table-column label="设备" min-width="150">
+          <template #default="{ row }">{{ row.device?.name || '-' }}</template>
+        </el-table-column>
         <el-table-column label="CPU" width="100">
           <template #default="{ row }"> <el-tag v-if="row.cpu_usage" size="small">{{ row.cpu_usage }}%</el-tag><span v-else>-</span> </template>
         </el-table-column>

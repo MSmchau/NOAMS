@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card shadow="hover">
+    <el-card shadow="never">
       <template #header>
         <span>巡检报告</span>
       </template>
@@ -10,8 +10,12 @@
         <el-col :span="8"><el-statistic title="异常" :value="summary.anomaly" /></el-col>
       </el-row>
       <el-table :data="inspections" v-loading="loading" stripe>
-        <el-table-column prop="device?.name" label="设备" min-width="150" />
-        <el-table-column prop="device?.management_ip" label="IP" width="140" />
+        <el-table-column label="设备" min-width="150">
+          <template #default="{ row }">{{ row.device?.name || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="IP" width="140">
+          <template #default="{ row }">{{ row.device?.management_ip || '-' }}</template>
+        </el-table-column>
         <el-table-column label="CPU" width="80"><template #default="{ row }">{{ row.cpu_usage ?? '-' }}%</template></el-table-column>
         <el-table-column label="内存" width="80"><template #default="{ row }">{{ row.memory_usage ?? '-' }}%</template></el-table-column>
         <el-table-column label="状态" width="80">

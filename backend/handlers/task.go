@@ -121,7 +121,7 @@ func (h *TaskHandler) Logs(c *gin.Context) {
 
 	var logs []models.InspectionResult
 	offset := (page - 1) * pageSize
-	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
+	query.Preload("Device").Offset(offset).Limit(pageSize).Order("id DESC").Find(&logs)
 
 	utils.SuccessPage(c, logs, total, page, pageSize)
 }
