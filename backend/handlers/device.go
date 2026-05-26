@@ -106,6 +106,17 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 	// 创建后立即检测一次设备状态，无需等待后台 pinger
 	if h.pinger != nil {
 		h.pinger.PingDevice(&device)
+	// 自动创建巡检任务，数据即刻同步到仪表盘 TOP10
+	inspection := models.InspectionResult{
+		TaskID:          "insp_" + strconv.FormatInt(time.Now().UnixNano(), 36),
+		DeviceID:        device.ID,
+		Status:          "pending",
+		InterfaceStatus: "{}",
+		InspectedAt:     time.Now(),
+	}
+	if err := h.db.Omit("Device").Create(&inspection).Error; err != nil {
+		_ = err
+	}
 	}
 
 	utils.Success(c, device)
@@ -317,6 +328,17 @@ func (h *DeviceHandler) ImportDevices(c *gin.Context) {
 		// 创建后检测在线状态
 		if h.pinger != nil {
 			h.pinger.PingDevice(&device)
+	// 自动创建巡检任务，数据即刻同步到仪表盘 TOP10
+	inspection := models.InspectionResult{
+		TaskID:          "insp_" + strconv.FormatInt(time.Now().UnixNano(), 36),
+		DeviceID:        device.ID,
+		Status:          "pending",
+		InterfaceStatus: "{}",
+		InspectedAt:     time.Now(),
+	}
+	if err := h.db.Omit("Device").Create(&inspection).Error; err != nil {
+		_ = err
+	}
 		}
 		success++
 	}
