@@ -35,10 +35,11 @@ func (h *InspectionHandler) InspectDevice(c *gin.Context) {
 
 	taskID := "insp_" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	result := models.InspectionResult{
-		TaskID:      taskID,
-		DeviceID:    uint(id),
-		Status:      "pending",
-		InspectedAt: time.Now(),
+		TaskID:          taskID,
+		DeviceID:        uint(id),
+		Status:          "pending",
+		InterfaceStatus: "{}",
+		InspectedAt:     time.Now(),
 	}
 
 	if err := h.db.Omit("Device").Create(&result).Error; err != nil {
@@ -73,6 +74,7 @@ func (h *InspectionHandler) BatchInspect(c *gin.Context) {
 	for _, deviceID := range req.DeviceIDs {
 		results = append(results, models.InspectionResult{
 			TaskID:      taskID,
+			InterfaceStatus: "{}",
 			DeviceID:    deviceID,
 			Status:      "pending",
 			InspectedAt: now,
