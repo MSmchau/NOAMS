@@ -1,7 +1,7 @@
 <template>
-  <div class="device-form">
-    <div class="form-card">
-      <div class="form-header">{{ isEdit ? '编辑设备' : '添加设备' }}</div>
+  <div class="page-container">
+    <el-card shadow="never">
+      <template #header>{{ isEdit ? '编辑设备' : '添加设备' }}</template>
 
       <el-form
         ref="formRef"
@@ -81,7 +81,7 @@
           <el-button @click="handleCancel">取消</el-button>
         </el-form-item>
       </el-form>
-    </div>
+    </el-card>
   </div>
 </template>
 
@@ -175,26 +175,6 @@ function handleCancel() {
 }
 
 onMounted(() => {
-  if (isEdit.value) {
-    loadDevice()
-  }
+  if (isEdit.value) loadDevice()
 })
 </script>
-
-<style scoped>
-.form-card {
-  padding: 24px;
-  background: rgba(26, 35, 59, 0.7);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 212, 255, 0.06);
-  border-radius: 12px;
-}
-.form-header {
-  font-size: 16px;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(0, 212, 255, 0.06);
-}
-</style>
