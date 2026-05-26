@@ -295,7 +295,7 @@ func parseCPU(output string) *float64 {
 
 // parseMemory 从命令输出中解析内存使用率
 func parseMemory(output string) *float64 {
-	// 1. 直接百分比： "Current memory usage: 18%"
+	// 1. 直接百分比： "Current memory usage: 18%" / "Memory Usage: 35%"
 	re1 := regexp.MustCompile(`(?i)(?:memory|mem)\s*(?:usage|used|utilization)?[\s:\-]+(\d+(?:\.\d+)?)%`)
 	if matches := re1.FindStringSubmatch(output); len(matches) > 1 {
 		if v, err := strconv.ParseFloat(matches[1], 64); err == nil && v >= 0 && v <= 100 {
@@ -303,35 +303,51 @@ func parseMemory(output string) *float64 {
 		}
 	}
 
-	// 2. FreeRatio 表格格式: "... FreeRatio 84%"
-	reFree := regexp.MustCompile(`(?i)FreeRatio\s+(\d+(?:\.\d+)?)%`)
+	// 2. FreeRatio 表格格式: "... FreeRatio: 84%" 或 "... FreeRatio 84%"
+	// 注意：FreeRatio 是空闲率，需转换为使用率 (100 - FreeRatio)
+	reFree := regexp.MustCompile(`(?i)FreeRatio[\s:]+(\d+(?:\.\d+)?)%`)
 	if matches := reFree.FindStringSubmatch(output); len(matches) > 1 {
 		if v, err := strconv.ParseFloat(matches[1], 64); err == nil && v >= 0 && v <= 100 {
-			return &v
+			used := 100 - v
+			return &used
 		}
 	}
 
-	// 3. "used/total" 同行: "Used: X ... Total: Y"
-	re2 := regexp.MustCompile(`(?i)used[\s:]+(\d+)[\s\S]{0,40}total[\s:]+(\d+)`)
-	if matches := re2.FindStringSubmatch(output); len(matches) > 2 {
-		used, _ := strconv.ParseFloat(matches[1], 64)
-		total, _ := strconv.ParseFloat(matches[2], 64)
-		if total > 0 && used > 0 && used < total {
+	// 3. 从输出中分别提取 Used 和 Total（适用于 H3C display memory 等多行格式）
+	reUsed := regexp.MustCompile(`(?i)(?:^|\n)\s*[Uu]sed[\s:]+(\d+)`)
+	reTotal := regexp.MustCompile(`(?i)(?:^|\n)\s*[Tt]otal[\s:]+(\d+)`)
+	usedMatch := reUsed.FindStringSubmatch(output)
+	totalMatch := reTotal.FindStringSubmatch(output)
+	if len(usedMatch) > 1 && len(totalMatch) > 1 {
+		used, err1 := strconv.ParseFloat(usedMatch[1], 64)
+		total, err2 := strconv.ParseFloat(totalMatch[1], 64)
+		if err1 == nil && err2 == nil && total > 0 && used >= 0 && used <= total {
 			v := used / total * 100
 			return &v
 		}
 	}
 
-	// 4. "Total Physical: X" + "Used: Y"
+	// 4. "used/total" 同行: "Used: X ... Total: Y"
+	re2 := regexp.MustCompile(`(?i)used[\s:]+(\d+)[\s\S]{0,200}total[\s:]+(\d+)`)
+	if matches := re2.FindStringSubmatch(output); len(matches) > 2 {
+		used, _ := strconv.ParseFloat(matches[1], 64)
+		total, _ := strconv.ParseFloat(matches[2], 64)
+		if total > 0 && used >= 0 && used <= total {
+			v := used / total * 100
+			return &v
+		}
+	}
+
+	// 5. "Total Physical: X" + "Used: Y"
 	reTotalPhysical := regexp.MustCompile(`(?i)Total\s+Physical[\s:]+(\d+)`)
-	reUsed := regexp.MustCompile(`(?i)Used[\s:]+(\d+)`)
+	reUsed2 := regexp.MustCompile(`(?i)Used[\s:]+(\d+)`)
 	totalPhysicalMatch := reTotalPhysical.FindStringSubmatch(output)
 	if totalPhysicalMatch != nil {
-		usedMatch := reUsed.FindStringSubmatch(output)
+		usedMatch := reUsed2.FindStringSubmatch(output)
 		if len(usedMatch) > 1 {
 			total, _ := strconv.ParseFloat(totalPhysicalMatch[1], 64)
 			used, _ := strconv.ParseFloat(usedMatch[1], 64)
-			if total > 0 && used > 0 && used < total {
+			if total > 0 && used >= 0 && used <= total {
 				v := used / total * 100
 				return &v
 			}
