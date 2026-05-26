@@ -138,6 +138,14 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 		return
 	}
 
+	// 解密凭证密码（AES-256 加密存储）
+	decPw, err := decryptField(device.Credential.Password)
+	if err != nil {
+		zap.L().Warn("解密凭证密码失败", zap.String("device", device.Name), zap.Error(err))
+	} else {
+		device.Credential.Password = decPw
+	}
+
 	spec, ok := deviceCommands[device.DeviceType]
 	if !ok {
 		ins.failTask(task, fmt.Sprintf("不支持的设备类型: %s", device.DeviceType))
@@ -187,6 +195,7 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 	// 解析巡检数据
 	var cpuUsage, memoryUsage *float64
 	var uptime string
+	var interfaceStatus string
 	var rawOutputs []string
 
 	for _, r := range resp.Results {
@@ -201,6 +210,9 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 		if spec.UptimeCommand != "" && r.Command == spec.UptimeCommand {
 			uptime = parseUptime(r.Output)
 		}
+		if spec.InterfaceCommand != "" && r.Command == spec.InterfaceCommand {
+			interfaceStatus = parseInterfaceStatus(r.Output)
+		}
 	}
 
 	// 更新数据库
@@ -213,6 +225,9 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 	}
 	if memoryUsage != nil {
 		updates["memory_usage"] = memoryUsage
+	}
+	if interfaceStatus != "" {
+		updates["interface_status"] = interfaceStatus
 	}
 
 	// 异常检测：CPU > 90% 或内存 > 90%
@@ -399,6 +414,35 @@ func parseUptime(output string) string {
 }
 
 // executeRequest 发送给 netmiko-worker 的请求结构
+func parseInterfaceStatus(output string) string {
+	type iface struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	}
+	var interfaces []iface
+
+	re := regexp.MustCompile(`(?m)^\s*(?:GE|GigabitEthernet|Ten-GigabitEthernet|FastEthernet|Eth|XGE|MGigEthernet)[\d/]+[\s.]+(UP|up|Down|down|Administratively Down)`)
+	matches := re.FindAllStringSubmatch(output, -1)
+	for _, m := range matches {
+		s := "down"
+		if len(m) > 1 && (m[1] == "UP" || m[1] == "up") {
+			s = "up"
+		}
+		name := strings.TrimSpace(strings.TrimRight(m[0], m[1]))
+		interfaces = append(interfaces, iface{Name: name, Status: s})
+	}
+
+	if len(interfaces) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(interfaces)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+
 type executeRequest struct {
 	IP         string   `json:"ip"`
 	Port       int      `json:"port"`

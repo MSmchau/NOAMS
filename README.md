@@ -9,13 +9,9 @@ Network Operations Automation Management System
 ```
 ┌──────────────────────────────────────────────────┐
 │                  前端层 (Vue 3)                    │
-│  设备管理 │ 自动巡检 │ 配置备份 │ 状态监控 │ 告警管理 │
+│  设备管理 │ 设备巡检 │ 配置备份 │ 状态监控 │ 告警管理 │
 └──────────────────────┬───────────────────────────┘
-                       │ HTTP / WebSocket
-┌──────────────────────▼───────────────────────────┐
-│                  API 网关 (Nginx)                   │
-└──────────────────────┬───────────────────────────┘
-                       │
+                       │ HTTP REST API
 ┌──────────────────────▼───────────────────────────┐
 │              后端服务层 (Go + Gin)                 │
 │  设备管理 │ 巡检调度 │ 配置管理 │ 告警引擎 │ 任务调度 │
@@ -23,9 +19,9 @@ Network Operations Automation Management System
                        │
 ┌──────────────────────▼───────────────────────────┐
 │                自动化执行层                         │
-│  Netmiko (SSH) │ Oxidized (配置备份 + Git)         │
+│           Netmiko (Python SSH 微服务)              │
 └──────────────────────┬───────────────────────────┘
-                       │ SSH / NETCONF
+                       │ SSH
 ┌──────────────────────▼───────────────────────────┐
 │              被管网络设备层                         │
 │  H3C │ 华为 │ 思科 │ 锐捷 │ 等                     │
@@ -37,48 +33,49 @@ Network Operations Automation Management System
 | 层级 | 技术 |
 |---|---|
 | 前端 | Vue 3 + TypeScript + Vite + Element Plus + Pinia |
-| 后端 | Go 1.22+ + Gin + GORM |
+| 后端 | Go + Gin + GORM |
 | 数据库 | MySQL 8.0 / SQLite（开发模式） |
-| 缓存 | Redis 7 |
-| SSH 自动化 | Netmiko (Python) |
-| 配置备份 | Oxidized + Git |
+| SSH 自动化 | Netmiko (Python 微服务) |
 | 容器化 | Docker + Docker Compose |
 
 ## 功能模块
 
 ### 设备管理
-- 设备全生命周期管理（添加/编辑/删除/分组）
+- 设备全生命周期管理（添加/编辑/删除）
 - 支持 H3C Comware、华为 VRP、思科 IOS、锐捷 OS
 - 凭据 AES-256 加密存储
+- 支持设备分组管理
 - 多维度搜索过滤
+- JSON 导入/导出
 
-### 自动巡检
+### 设备巡检
 - 定时/手动触发设备巡检
-- 自动采集 CPU、内存、接口状态、硬件信息
+- 自动采集 CPU、内存、接口状态
 - 并发 SSH 执行（goroutine 池）
 - 异常指标自动检测与告警
+- 巡检记录查看与 CSV 导出
 
 ### 配置备份
-- 一键/定时配置备份
-- Git 版本管理，支持历史追溯
-- 配置对比（Diff）
-- 配置回滚（二次确认机制）
+- 一键触发配置备份
+- 配置内容查看与下载
+- 多版本历史追溯
 
 ### 状态监控
 - Dashboard 大屏概览
 - 设备在线率统计
 - CPU/内存使用率 TOP 排行
-- WebSocket 实时推送
+- 最近巡检记录列表
 
 ### 告警管理
 - 多级告警（严重/警告/提示）
+- 设备离线/上线自动告警
+- 巡检异常自动告警
 - 告警确认与处理流程
-- 支持钉钉/邮件通知（可配置）
 
 ### 定时任务
-- Cron 表达式调度
-- 预置任务模板（每日巡检、每周备份、AP 状态采集）
-- 执行日志与失败重试
+- Cron 表达式调度管理
+- 预置任务模板（巡检、备份）
+- 执行日志查看
 
 ## 快速开始
 
@@ -129,14 +126,14 @@ NOAMS/
 │   ├── main.go            # 入口：服务启动、数据库迁移
 │   ├── config/            # 配置管理
 │   ├── models/            # 数据模型（8 个核心表）
-│   ├── handlers/          # API 处理器（7 个模块）
+│   ├── handlers/          # API 处理器
 │   ├── services/          # 业务逻辑层
 │   ├── middleware/         # 认证与 CORS 中间件
-│   ├── routes/            # 路由注册（30+ API 端点）
+│   ├── routes/            # 路由注册
 │   └── Dockerfile
 ├── frontend/              # Vue 3 前端
 │   ├── src/
-│   │   ├── views/         # 页面组件（11 个功能页面）
+│   │   ├── views/         # 页面组件
 │   │   ├── api/           # API 接口层
 │   │   ├── router/        # 路由配置
 │   │   ├── stores/        # Pinia 状态管理
@@ -146,7 +143,7 @@ NOAMS/
 │   ├── app.py             # Flask + Netmiko
 │   └── Dockerfile
 ├── nginx/                 # 反向代理配置
-├── docker-compose.yml     # 6 服务编排
+├── docker-compose.yml     # 服务编排
 └── .env.example           # 环境变量模板
 ```
 
@@ -157,9 +154,12 @@ NOAMS/
 | 认证 | `POST /api/v1/auth/login` | 用户登录 |
 | 设备 | `GET/POST /api/v1/devices` | 设备列表/创建 |
 | 设备 | `GET/PUT/DELETE /api/v1/devices/:id` | 设备详情/编辑/删除 |
+| 分组 | `GET/POST /api/v1/groups` | 分组列表/创建 |
 | 巡检 | `POST /api/v1/devices/:id/inspect` | 单设备巡检 |
 | 巡检 | `POST /api/v1/inspections/batch` | 批量巡检 |
+| 巡检 | `GET /api/v1/inspections/export` | 巡检记录 CSV 导出 |
 | 配置 | `POST /api/v1/configs/backup` | 配置备份 |
+| 配置 | `GET /api/v1/configs/export/:id` | 配置内容下载 |
 | 告警 | `GET /api/v1/alerts` | 告警列表 |
 | 监控 | `GET /api/v1/monitor/dashboard` | Dashboard 数据 |
 
@@ -183,7 +183,7 @@ cd frontend && npx vite build
 | 阶段 | 周期 | 内容 |
 |---|---|---|
 | 一期：基础平台 | 6 周 | 环境搭建、设备管理、用户认证、Netmiko 微服务、Dashboard |
-| 二期：自动化能力 | 4 周 | 自动巡检、配置备份（Oxidized）、告警引擎 |
+| 二期：自动化能力 | 4 周 | 自动巡检、配置备份、告警引擎 |
 | 三期：增强优化 | 3 周 | AP 管理、定时任务、配置回滚、权限细化 |
 
 ## License

@@ -51,16 +51,6 @@ services:
       - TZ=Asia/Shanghai
     restart: always
 
-  # oxidized:  # 配置备份引擎，启用时取消注释
-  #   image: oxidized/oxidized:latest
-  #   container_name: noams-oxidized
-  #   ports:
-  #     - "8888:8888"
-  #   volumes:
-  #     - ./oxidized/config:/root/.config/oxidized
-  #     - oxidized_configs:/root/.config/oxidized/configs
-  #   restart: always
-
   mysql:
     image: mysql:8.0
     container_name: noams-mysql

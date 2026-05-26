@@ -94,3 +94,20 @@ export function confirmAlert(id: number) {
 export function resolveAlert(id: number) {
   return request.put(`/alerts/${id}/resolve`)
 }
+
+// Device Groups
+export function getGroups() {
+  return request.get('/groups')
+}
+
+export function createGroup(data: { name: string; parent_id?: number }) {
+  return request.post('/groups', data)
+}
+
+export function updateGroup(id: number, data: Record<string, any>) {
+  return request.put(`/groups/${id}`, data)
+}
+
+export function deleteGroup(id: number) {
+  return request.delete(`/groups/${id}`)
+}

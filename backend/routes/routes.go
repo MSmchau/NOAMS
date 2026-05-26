@@ -22,6 +22,7 @@ func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 	alertHandler := handlers.NewAlertHandler(db)
 	taskHandler := handlers.NewTaskHandler(db)
 	monitorHandler := handlers.NewMonitorHandler(db)
+	deviceGroupHandler := handlers.NewDeviceGroupHandler(db)
 
 	api := r.Group("/api/v1")
 
@@ -71,7 +72,13 @@ func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 		authed.GET("/configs/export/:id", configHandler.Export)
 		authed.GET("/configs/diff", configHandler.Diff)
 
-		// Alerts
+		// Device groups
+		authed.GET("/groups", deviceGroupHandler.List)
+		authed.POST("/groups", deviceGroupHandler.Create)
+		authed.PUT("/groups/:id", deviceGroupHandler.Update)
+		authed.DELETE("/groups/:id", deviceGroupHandler.Delete)
+
+			// Alerts
 		authed.GET("/alerts", alertHandler.List)
 		authed.GET("/alerts/stats", alertHandler.Stats)
 		authed.PUT("/alerts/:id/confirm", alertHandler.Confirm)
