@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"time"
+
 	"noams/models"
 	"noams/utils"
 
@@ -23,6 +25,19 @@ type topItem struct {
 	MemUsage   float64 `json:"mem_usage"`
 }
 
+type inspectionRow struct {
+	ID          uint      `json:"id"`
+	DeviceID    uint      `json:"device_id"`
+	DeviceName  string    `json:"device_name"`
+	DeviceIP    string    `json:"device_ip"`
+	CPUUsage    *float64  `json:"cpu_usage"`
+	MemoryUsage *float64  `json:"memory_usage"`
+	Uptime      string    `json:"uptime"`
+	Status      string    `json:"status"`
+	IsAnomaly   int       `json:"is_anomaly"`
+	InspectedAt time.Time `json:"inspected_at"`
+}
+
 func (h *MonitorHandler) Dashboard(c *gin.Context) {
 	var deviceCount, onlineCount, offlineCount int64
 	var alertTriggered, alertResolved int64
@@ -33,15 +48,20 @@ func (h *MonitorHandler) Dashboard(c *gin.Context) {
 	h.db.Model(&models.Alert{}).Where("status = ?", "triggered").Count(&alertTriggered)
 	h.db.Model(&models.Alert{}).Where("status = ?", "resolved").Count(&alertResolved)
 
-	// 最近成功的巡检记录
-	var lastInspections []models.InspectionResult
-	h.db.Preload("Device").
-		Where("status = ?", "success").
-		Order("inspected_at DESC").
-		Limit(10).
-		Find(&lastInspections)
+	// 最近巡检记录（JOIN 设备表获取名称）
+	var recentInspections []inspectionRow
+	h.db.Raw(`
+		SELECT r.id, r.device_id, d.name AS device_name,
+			d.management_ip AS device_ip, r.cpu_usage, r.memory_usage,
+			r.uptime, r.status, r.is_anomaly, r.inspected_at
+		FROM inspection_results r
+		LEFT JOIN devices d ON d.id = r.device_id
+		WHERE r.status = 'success'
+		ORDER BY r.inspected_at DESC
+		LIMIT 10
+	`).Scan(&recentInspections)
 
-	// CPU TOP10 —— 取每台设备最新一次巡检的 cpu_usage（非 NULL）
+	// CPU TOP10
 	var cpuTop []topItem
 	h.db.Raw(`
 		SELECT r.device_id, d.name AS device_name, r.cpu_usage
@@ -56,7 +76,7 @@ func (h *MonitorHandler) Dashboard(c *gin.Context) {
 		LIMIT 10
 	`).Scan(&cpuTop)
 
-	// 内存 TOP10 —— 取每台设备最新一次巡检的 memory_usage（非 NULL）
+	// 内存 TOP10
 	var memTop []topItem
 	h.db.Raw(`
 		SELECT r.device_id, d.name AS device_name, r.memory_usage AS mem_usage
@@ -83,6 +103,6 @@ func (h *MonitorHandler) Dashboard(c *gin.Context) {
 		},
 		"cpu_top":       cpuTop,
 		"mem_top":       memTop,
-		"recent_checks": lastInspections,
+		"recent_checks": recentInspections,
 	})
 }

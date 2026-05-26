@@ -64,10 +64,10 @@
             </div>
           </template>
           <el-table :data="recentChecks" stripe size="small" max-height="420" v-loading="loading">
-            <el-table-column prop="device?.name" label="设备名称" min-width="150" />
+            <el-table-column prop="device_name" label="设备名称" min-width="150" />
             <el-table-column label="管理IP" width="140">
               <template #default="{ row }">
-                <code style="font-size:12px;color:#595959">{{ row.device?.management_ip || '-' }}</code>
+                <code style="font-size:12px;color:#595959">{{ row.device_ip || '-' }}</code>
               </template>
             </el-table-column>
             <el-table-column label="CPU" width="90" align="center">
