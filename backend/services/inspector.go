@@ -303,34 +303,43 @@ func parseMemory(output string) *float64 {
 		}
 	}
 
-	// 2. "used/total" 同行: "Used: 1234, Total: 6912"
-	re2 := regexp.MustCompile(`(?i)used[\s:]+(\d+)[\s\S]{0,30}total[\s:]+(\d+)`)
+	// 2. FreeRatio 表格格式: "... FreeRatio 84%"
+	reFree := regexp.MustCompile(`(?i)FreeRatio\s+(\d+(?:\.\d+)?)%`)
+	if matches := reFree.FindStringSubmatch(output); len(matches) > 1 {
+		if v, err := strconv.ParseFloat(matches[1], 64); err == nil && v >= 0 && v <= 100 {
+			return &v
+		}
+	}
+
+	// 3. "used/total" 同行: "Used: X ... Total: Y"
+	re2 := regexp.MustCompile(`(?i)used[\s:]+(\d+)[\s\S]{0,40}total[\s:]+(\d+)`)
 	if matches := re2.FindStringSubmatch(output); len(matches) > 2 {
 		used, _ := strconv.ParseFloat(matches[1], 64)
 		total, _ := strconv.ParseFloat(matches[2], 64)
-		if total > 0 && used > 0 {
+		if total > 0 && used > 0 && used < total {
 			v := used / total * 100
 			return &v
 		}
 	}
 
-	// 3. "Total/Used" 分行
-	re3 := regexp.MustCompile(`(?i)Total[\s:]+(\d+)`)
-	re4 := regexp.MustCompile(`(?i)Used[\s:]+(\d+)`)
-	totalMatch := re3.FindStringSubmatch(output)
-	usedMatch := re4.FindStringSubmatch(output)
-	if len(totalMatch) > 1 && len(usedMatch) > 1 {
-		total, _ := strconv.ParseFloat(totalMatch[1], 64)
-		used, _ := strconv.ParseFloat(usedMatch[1], 64)
-		if total > 0 && used > 0 {
-			v := used / total * 100
-			return &v
+	// 4. "Total Physical: X" + "Used: Y"
+	reTotalPhysical := regexp.MustCompile(`(?i)Total\s+Physical[\s:]+(\d+)`)
+	reUsed := regexp.MustCompile(`(?i)Used[\s:]+(\d+)`)
+	totalPhysicalMatch := reTotalPhysical.FindStringSubmatch(output)
+	if totalPhysicalMatch != nil {
+		usedMatch := reUsed.FindStringSubmatch(output)
+		if len(usedMatch) > 1 {
+			total, _ := strconv.ParseFloat(totalPhysicalMatch[1], 64)
+			used, _ := strconv.ParseFloat(usedMatch[1], 64)
+			if total > 0 && used > 0 && used < total {
+				v := used / total * 100
+				return &v
+			}
 		}
 	}
 
 	return nil
 }
-
 // parseUptime 从命令输出中解析系统运行时长
 func parseUptime(output string) string {
 	// 常见格式: "uptime is 45 weeks, 5 days, 3 hours, 18 minutes"
