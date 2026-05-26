@@ -35,7 +35,7 @@
           <el-sub-menu index="inspection">
             <template #title>
               <el-icon><Search /></el-icon>
-              <span>自动巡检</span>
+              <span>设备巡检</span>
             </template>
             <el-menu-item index="/inspections">巡检记录</el-menu-item>
             <el-menu-item index="/inspections/report">巡检报告</el-menu-item>

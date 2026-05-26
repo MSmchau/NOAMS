@@ -44,7 +44,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/devices/DeviceDetailView.vue'),
         meta: { title: '设备详情' },
       },
-      // 自动巡检
+      // 设备巡检
       {
         path: 'inspections',
         name: 'Inspections',
