@@ -51,6 +51,12 @@
             <el-button type="primary" size="small" @click="handleAdd">
               <el-icon><Plus /></el-icon>添加设备
             </el-button>
+            <el-button size="small" @click="handleExport">
+              <el-icon><Download /></el-icon>导出
+            </el-button>
+            <el-button size="small" @click="showImportDialog = true">
+              <el-icon><Upload /></el-icon>导入
+            </el-button>
             <el-button size="small" @click="loadDevices">
               <el-icon><Refresh /></el-icon>刷新
             </el-button>
@@ -112,14 +118,70 @@
       </div>
     </el-card>
   </div>
+
+  <!-- 导入对话框 -->
+  <el-dialog v-model="showImportDialog" title="批量导入设备" width="560px" :close-on-click-modal="false">
+    <div style="margin-bottom:16px;">
+      <p style="font-size:13px;color:#595959;margin-bottom:8px;">
+        请粘贴 JSON 格式的设备数据，或上传 JSON 文件：
+      </p>
+      <el-upload
+        ref="uploadRef"
+        accept=".json"
+        :auto-upload="false"
+        :show-file-list="false"
+        :on-change="handleFileChange"
+      >
+        <el-button size="small" type="primary" plain>选择 JSON 文件</el-button>
+      </el-upload>
+    </div>
+    <el-input
+      v-model="importJson"
+      type="textarea"
+      :rows="10"
+      placeholder='[
+  {
+    "name": "核心交换机",
+    "management_ip": "192.168.1.1",
+    "device_type": "hp_comware",
+    "vendor": "h3c",
+    "role": "core",
+    "model": "S10504",
+    "building": "中心机房"
+  }
+]'
+    />
+    <div v-if="importResult" style="margin-top:12px;">
+      <el-alert
+        :type="importResult.failed > 0 ? 'warning' : 'success'"
+        :closable="false"
+        show-icon
+      >
+        <template #title>
+          导入完成：成功 {{ importResult.success }} 台，失败 {{ importResult.failed }} 台
+        </template>
+        <template #default v-if="importResult.errors?.length">
+          <ul style="margin:4px 0 0;padding-left:20px;font-size:12px;">
+            <li v-for="e in importResult.errors" :key="e">{{ e }}</li>
+          </ul>
+        </template>
+      </el-alert>
+    </div>
+    <template #footer>
+      <el-button @click="showImportDialog = false">关闭</el-button>
+      <el-button type="primary" :loading="importing" @click="handleImport">开始导入</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDevices, deleteDevice } from '@/api/device'
+import request from '@/api/request'
 import { ElMessage } from 'element-plus'
 import type { Device } from '@/api/device'
+import type { UploadInstance, UploadRawFile } from 'element-plus'
 
 const router = useRouter()
 const devices = ref<Device[]>([])
@@ -129,6 +191,68 @@ const pageSize = ref(20)
 const total = ref(0)
 
 const filters = reactive({ name: '', management_ip: '', vendor: '', role: '', status: '' as string | number })
+
+// 导入导出
+const showImportDialog = ref(false)
+const importJson = ref('')
+const importing = ref(false)
+const importResult = ref<any>(null)
+const uploadRef = ref<UploadInstance>()
+
+function handleFileChange(uploadFile: { raw?: UploadRawFile }) {
+  if (!uploadFile.raw) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    importJson.value = e.target?.result as string
+  }
+  reader.readAsText(uploadFile.raw)
+}
+
+async function handleExport() {
+  try {
+    const res = await request.get('/devices/export', { responseType: 'blob' })
+    const url = URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `devices_${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  }
+}
+
+async function handleImport() {
+  if (!importJson.value.trim()) {
+    ElMessage.warning('请先粘贴 JSON 数据或上传文件')
+    return
+  }
+  let devices: any[]
+  try {
+    devices = JSON.parse(importJson.value)
+    if (!Array.isArray(devices)) {
+      ElMessage.warning('JSON 格式错误：应为数组格式')
+      return
+    }
+  } catch {
+    ElMessage.warning('JSON 格式错误，请检查')
+    return
+  }
+  importing.value = true
+  importResult.value = null
+  try {
+    const res = await request.post('/devices/import', { devices })
+    importResult.value = res.data
+    ElMessage.success(`导入完成：成功 ${res.data.success} 台`)
+    showImportDialog.value = false
+    loadDevices()
+  } catch {
+    ElMessage.error('导入失败')
+  } finally {
+    importing.value = false
+  }
+}
 
 function roleLabel(role?: string) {
   const map: Record<string, string> = { core: '核心', ac: 'AC', aggregation: '本体', access: '接入', ap: 'AP' }

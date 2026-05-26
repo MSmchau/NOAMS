@@ -42,6 +42,8 @@ func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 		authed.GET("/devices/stats", deviceHandler.Stats)
 		authed.GET("/devices/:id", deviceHandler.Get)
 		authed.POST("/devices", deviceHandler.Create)
+		authed.POST("/devices/import", deviceHandler.ImportDevices)
+		authed.GET("/devices/export", deviceHandler.ExportDevices)
 		authed.GET("/devices/:id/ping", deviceHandler.Ping)
 		authed.PUT("/devices/:id", deviceHandler.Update)
 		authed.DELETE("/devices/:id", middleware.AdminRequired(), deviceHandler.Delete)

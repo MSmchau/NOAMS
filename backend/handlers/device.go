@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -205,4 +206,108 @@ func (h *DeviceHandler) ListAll(c *gin.Context) {
 		return
 	}
 	utils.Success(c, devices)
+}
+
+// ExportDevices 导出所有设备为 JSON 文件
+func (h *DeviceHandler) ExportDevices(c *gin.Context) {
+	devices, err := h.deviceService.ListAll()
+	if err != nil {
+		utils.ServerError(c, "failed to export devices")
+		return
+	}
+
+	c.Header("Content-Type", "application/json")
+	c.Header("Content-Disposition", "attachment; filename=devices_export.json")
+	c.JSON(200, devices)
+}
+
+// ImportDevices 批量导入设备
+func (h *DeviceHandler) ImportDevices(c *gin.Context) {
+	var req struct {
+		Devices []struct {
+			Name         string `json:"name"`
+			ManagementIP string `json:"management_ip"`
+			DeviceType   string `json:"device_type"`
+			Vendor       string `json:"vendor"`
+			Role         string `json:"role"`
+			Model        string `json:"model"`
+			SSHPort      int    `json:"ssh_port"`
+			CredentialID *uint  `json:"credential_id"`
+			Building     string `json:"building"`
+			Floor        int    `json:"floor"`
+			APName       string `json:"ap_name"`
+			SNMPCommunity string `json:"snmp_community"`
+			Description  string `json:"description"`
+		} `json:"devices"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "无效的请求格式: "+err.Error())
+		return
+	}
+
+	if len(req.Devices) == 0 {
+		utils.BadRequest(c, "导入设备列表为空")
+		return
+	}
+
+	var success, failed int
+	var errors []string
+
+	for i, d := range req.Devices {
+		if d.Name == "" || d.ManagementIP == "" {
+			errors = append(errors, fmt.Sprintf("第%d行: 设备名称和管理IP为必填项", i+1))
+			failed++
+			continue
+		}
+
+		device := models.Device{
+			Name:          d.Name,
+			ManagementIP:  d.ManagementIP,
+			DeviceType:    d.DeviceType,
+			Vendor:        d.Vendor,
+			Role:          d.Role,
+			Model:         d.Model,
+			SSHPort:       d.SSHPort,
+			CredentialID:  d.CredentialID,
+			Building:      d.Building,
+			Floor:         d.Floor,
+			APName:        d.APName,
+			SNMPCommunity: d.SNMPCommunity,
+			Description:   d.Description,
+		}
+
+		if device.DeviceType == "" {
+			device.DeviceType = "hp_comware"
+		}
+		if device.Role == "" {
+			device.Role = "access"
+		}
+		if device.SSHPort == 0 {
+			device.SSHPort = 22
+		}
+
+		if err := h.deviceService.Create(&device); err != nil {
+			errors = append(errors, fmt.Sprintf("第%d行(%s): %s", i+1, d.Name, err.Error()))
+			failed++
+			continue
+		}
+
+		// 创建后检测在线状态
+		if h.pinger != nil {
+			h.pinger.PingDevice(&device)
+		}
+		success++
+	}
+
+	result := gin.H{
+		"success": success,
+		"failed":  failed,
+		"total":   len(req.Devices),
+	}
+	if len(errors) > 0 {
+		result["errors"] = errors
+	}
+
+	utils.Success(c, result)
 }
