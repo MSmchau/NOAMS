@@ -22,6 +22,10 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response) => {
+    // Blob 响应（如导出文件）直接返回，不做 JSON 校验
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     if (res.code !== 0) {
       ElMessage.error(res.message || 'Request failed')
