@@ -128,13 +128,32 @@ func (p *Pinger) checkDevice(device *models.Device) {
 
 	if device.Status != newStatus {
 		state := "在线"
+		alertType := "device_online"
+		severity := "info"
+		msg := fmt.Sprintf("设备 %s (%s) 恢复在线", device.Name, device.ManagementIP)
 		if newStatus == 0 {
 			state = "离线"
+			alertType = "device_offline"
+			severity = "critical"
+			msg = fmt.Sprintf("设备 %s (%s) 离线", device.Name, device.ManagementIP)
 		}
 		zap.L().Info("设备状态变更",
 			zap.String("name", device.Name),
 			zap.String("ip", device.ManagementIP),
 			zap.String("status", state))
+
+		// 生成告警
+		alert := models.Alert{
+			DeviceID:    &device.ID,
+			AlertType:   alertType,
+			Severity:    severity,
+			Message:     msg,
+			Status:      "triggered",
+			TriggeredAt: time.Now(),
+		}
+		if err := p.db.Create(&alert).Error; err != nil {
+			zap.L().Error("创建告警失败", zap.Error(err))
+		}
 	}
 }
 

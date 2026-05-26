@@ -61,12 +61,14 @@ func Setup(r *gin.Engine, db *gorm.DB, pinger *services.Pinger) {
 		authed.GET("/inspections/report", inspectionHandler.Report)
 		authed.GET("/inspections/latest", inspectionHandler.LatestReport)
 		authed.GET("/inspections/history/:deviceId", inspectionHandler.History)
+		authed.GET("/inspections/export", inspectionHandler.ExportCSV)
 
 		// Config backup
 		authed.POST("/configs/backup", configHandler.Backup)
 		authed.GET("/configs/history/all", configHandler.ListAll)
 		authed.GET("/configs/history/:deviceId", configHandler.History)
 		authed.POST("/configs/rollback", configHandler.Rollback)
+		authed.GET("/configs/export/:id", configHandler.Export)
 		authed.GET("/configs/diff", configHandler.Diff)
 
 		// Alerts

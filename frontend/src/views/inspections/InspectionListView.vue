@@ -56,7 +56,7 @@
     </el-card>
 
     <!-- 手动巡检对话框 -->
-    <el-dialog v-model="showManualDialog" title="手动巡检" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="showManualDialog" title="手动巡检" width="520px" :close-on-click-modal="false" @open="handleDialogOpen">
       <div style="margin-bottom:12px;font-size:13px;color:#595959;">选择要执行巡检的设备：</div>
       <el-table
         :data="allDevices"
@@ -166,5 +166,9 @@ async function handleManualInspect() {
   }
 }
 
-onMounted(() => { loadData() })
+function handleDialogOpen() {
+  loadDevices()
+}
+
+onMounted(() => { loadData(); loadDevices() })
 </script>

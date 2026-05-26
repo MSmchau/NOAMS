@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -165,6 +166,61 @@ func (h *InspectionHandler) History(c *gin.Context) {
 		Find(&results)
 
 	utils.Success(c, results)
+}
+
+func (h *InspectionHandler) ExportCSV(c *gin.Context) {
+	taskID := c.Query("task_id")
+	deviceID := c.Query("device_id")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+
+	query := h.db.Model(&models.InspectionResult{}).Preload("Device")
+	if taskID != "" {
+		query = query.Where("task_id = ?", taskID)
+	}
+	if deviceID != "" {
+		query = query.Where("device_id = ?", deviceID)
+	}
+	if startDate != "" {
+		query = query.Where("inspected_at >= ?", startDate)
+	}
+	if endDate != "" {
+		query = query.Where("inspected_at <= ?", endDate)
+	}
+
+	var results []models.InspectionResult
+	query.Order("id DESC").Find(&results)
+
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=inspection_report.csv")
+	// Write BOM for Excel UTF-8 compatibility
+	c.Writer.Write([]byte{0xEF, 0xBB, 0xBF})
+	c.Writer.WriteString("设备名称,管理IP,CPU使用率(%),内存使用率(%),运行时长,状态,异常,巡检时间\n")
+	for _, r := range results {
+		deviceName := ""
+		deviceIP := ""
+		if r.Device.Name != "" {
+			deviceName = r.Device.Name
+			deviceIP = r.Device.ManagementIP
+		}
+		cpu := ""
+		if r.CPUUsage != nil {
+			cpu = fmt.Sprintf("%.2f", *r.CPUUsage)
+		}
+		mem := ""
+		if r.MemoryUsage != nil {
+			mem = fmt.Sprintf("%.2f", *r.MemoryUsage)
+		}
+		status := r.Status
+		anomaly := "否"
+		if r.IsAnomaly == 1 {
+			anomaly = "是"
+		}
+		inspectedAt := r.InspectedAt.Format("2006-01-02 15:04:05")
+		line := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s\n",
+			deviceName, deviceIP, cpu, mem, r.Uptime, status, anomaly, inspectedAt)
+		c.Writer.WriteString(line)
+	}
 }
 
 var _ = middleware.GetUsername

@@ -20,6 +20,11 @@
       <el-table-column prop="config_hash" label="配置Hash" width="120">
         <template #default="{ row }">{{ row.config_hash?.substring(0, 12) || '-' }}</template>
       </el-table-column>
+      <el-table-column label="操作" width="80" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link size="small" @click="handleDownload(row)">下载</el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </el-card>
 </template>
@@ -28,7 +33,8 @@
 import { ref, watch, onMounted } from 'vue'
 import { getAllDevices } from '@/api/device'
 import { backupConfig, getConfigHistory } from '@/api/config'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from "element-plus"
+import request from "@/api/request"
 
 const devices = ref<any[]>([])
 const selectedDevice = ref<number>()
@@ -54,6 +60,22 @@ async function handleBackup() {
   try { await backupConfig([selectedDevice.value]); ElMessage.success('备份任务已创建'); loadHistory() }
   catch { }
   finally { backingUp.value = false }
+}
+
+async function handleDownload(row: any) {
+  try {
+    const res = await request.get(`/configs/export/${row.id}`, { responseType: 'blob' })
+    const deviceName = row.device?.name || `device_${row.device_id}`
+    const filename = `config_${deviceName}_${(row.created_at || '').substring(0, 10)}.txt`
+    const url = window.URL.createObjectURL(new Blob([res as any]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    window.URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败')
+  }
 }
 
 watch(selectedDevice, () => loadHistory())

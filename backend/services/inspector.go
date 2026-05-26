@@ -215,10 +215,41 @@ func (ins *Inspector) executeTask(task *models.InspectionResult) {
 		updates["memory_usage"] = memoryUsage
 	}
 
+	// 异常检测：CPU > 90% 或内存 > 90%
+	anomalyMsgs := []string{}
+	if cpuUsage != nil && *cpuUsage > 90 {
+		anomalyMsgs = append(anomalyMsgs, fmt.Sprintf("CPU使用率过高: %.1f%%", *cpuUsage))
+	}
+	if memoryUsage != nil && *memoryUsage > 90 {
+		anomalyMsgs = append(anomalyMsgs, fmt.Sprintf("内存使用率过高: %.1f%%", *memoryUsage))
+	}
+	if len(anomalyMsgs) > 0 {
+		updates["is_anomaly"] = 1
+		msg := strings.Join(anomalyMsgs, "; ")
+		updates["anomaly_msg"] = msg
+	}
+
 	if err := ins.db.Model(&models.InspectionResult{}).
 		Where("id = ?", task.ID).Updates(updates).Error; err != nil {
 		zap.L().Error("更新巡检结果失败", zap.Uint("task_id", task.ID), zap.Error(err))
 		return
+	}
+
+	// 若有异常则创建告警
+	if len(anomalyMsgs) > 0 {
+		msg := strings.Join(anomalyMsgs, "; ")
+		alert := models.Alert{
+			DeviceID:    &device.ID,
+			AlertType:   "inspection_anomaly",
+			Severity:    "warning",
+			Message:     fmt.Sprintf("设备 %s (%s): %s", device.Name, device.ManagementIP, msg),
+			Detail:      msg,
+			Status:      "triggered",
+			TriggeredAt: time.Now(),
+		}
+		if err := ins.db.Create(&alert).Error; err != nil {
+			zap.L().Error("创建异常告警失败", zap.Error(err))
+		}
 	}
 
 	// 同时更新设备的 last_seen
