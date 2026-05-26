@@ -54,6 +54,21 @@ func (h *ConfigHandler) Backup(c *gin.Context) {
 	})
 }
 
+func (h *ConfigHandler) ListAll(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	query := h.db.Model(&models.ConfigBackup{}).Preload("Device")
+	var total int64
+	query.Count(&total)
+
+	var backups []models.ConfigBackup
+	offset := (page - 1) * pageSize
+	query.Offset(offset).Limit(pageSize).Order("id DESC").Find(&backups)
+
+	utils.SuccessPage(c, backups, total, page, pageSize)
+}
+
 func (h *ConfigHandler) History(c *gin.Context) {
 	deviceID, err := strconv.ParseUint(c.Param("deviceId"), 10, 64)
 	if err != nil {

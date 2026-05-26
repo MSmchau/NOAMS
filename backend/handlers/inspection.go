@@ -33,13 +33,15 @@ func (h *InspectionHandler) InspectDevice(c *gin.Context) {
 		return
 	}
 
+	taskID := "insp_" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	result := models.InspectionResult{
+		TaskID:      taskID,
 		DeviceID:    uint(id),
 		Status:      "pending",
 		InspectedAt: time.Now(),
 	}
 
-	if err := h.db.Create(&result).Error; err != nil {
+	if err := h.db.Omit("Device").Create(&result).Error; err != nil {
 		utils.ServerError(c, "failed to create inspection task")
 		return
 	}
