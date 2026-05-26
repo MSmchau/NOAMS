@@ -23,6 +23,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - TZ=Asia/Shanghai
       - NOAMS_SERVER_PORT=8080
       - NOAMS_DB_DRIVER=${NOAMS_DB_DRIVER:-mysql}
       - NOAMS_DB_HOST=mysql
@@ -46,6 +47,8 @@ services:
     container_name: noams-netmiko
     ports:
       - "5000:5000"
+    environment:
+      - TZ=Asia/Shanghai
     restart: always
 
   # oxidized:  # 配置备份引擎，启用时取消注释
@@ -64,6 +67,7 @@ services:
     ports:
       - "3306:3306"
     environment:
+      - TZ=Asia/Shanghai
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root123}
       - MYSQL_DATABASE=netops
       - MYSQL_USER=netops
