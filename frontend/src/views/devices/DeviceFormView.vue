@@ -22,6 +22,40 @@
           <el-input-number v-model="form.ssh_port" :min="1" :max="65535" />
         </el-form-item>
 
+        <!-- SSH 认证 -->
+        <el-divider content-position="left">SSH 认证信息</el-divider>
+
+        <el-form-item label="SSH 凭据" prop="credential_id">
+          <el-select
+            v-model="form.credential_id"
+            placeholder="选择 SSH 凭据"
+            style="width: 100%;"
+            :loading="loadingCreds"
+          >
+            <el-option
+              v-for="c in credentials"
+              :key="c.id"
+              :label="c.name + ' (' + c.username + '@' + (form.management_ip || 'IP') + ')'"
+              :value="c.id"
+            >
+              <div class="cred-option">
+                <span class="cred-name">{{ c.name }}</span>
+                <span class="cred-user">{{ c.username }}</span>
+              </div>
+            </el-option>
+          </el-select>
+          <el-button
+            type="primary"
+            link
+            style="margin-left: 8px; flex-shrink: 0;"
+            @click="showCredDialog = true"
+          >
+            + 新建凭据
+          </el-button>
+        </el-form-item>
+
+        <el-divider content-position="left">基本信息</el-divider>
+
         <el-form-item label="设备类型" prop="device_type">
           <el-select v-model="form.device_type" style="width: 100%;">
             <el-option label="H3C Comware" value="hp_comware" />
@@ -82,6 +116,37 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <!-- 新建凭据对话框 -->
+    <el-dialog v-model="showCredDialog" title="新建 SSH 凭据" width="460px" :close-on-click-modal="false">
+      <el-form
+        ref="credFormRef"
+        :model="credForm"
+        :rules="credRules"
+        label-width="80px"
+        @keyup.enter="handleCreateCred"
+      >
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="credForm.name" placeholder="给凭据起个名字，如 核心交换机admin" />
+        </el-form-item>
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="credForm.username" placeholder="SSH 登录用户名" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="credForm.password" type="password" placeholder="SSH 登录密码" show-password />
+        </el-form-item>
+        <el-form-item label="启用密码">
+          <el-input v-model="credForm.enable_pw" type="password" placeholder="Enable 密码（可选）" show-password />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="credForm.description" placeholder="备注信息（可选）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCredDialog = false">取消</el-button>
+        <el-button type="primary" :loading="credSubmitting" @click="handleCreateCred">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -89,6 +154,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDevice, createDevice, updateDevice } from '@/api/device'
+import { getCredentials, createCredential } from '@/api/credential'
+import type { Credential } from '@/api/credential'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
@@ -99,10 +166,15 @@ const formRef = ref<FormInstance>()
 const isEdit = computed(() => !!route.params.id)
 const submitting = ref(false)
 
+// 凭据列表
+const credentials = ref<Credential[]>([])
+const loadingCreds = ref(false)
+
 const form = reactive({
   name: '',
   management_ip: '',
   ssh_port: 22,
+  credential_id: null as number | null,
   device_type: 'hp_comware',
   vendor: 'h3c',
   role: 'access',
@@ -120,7 +192,63 @@ const rules: FormRules = {
     { required: true, message: '请输入管理IP', trigger: 'blur' },
     { pattern: /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/, message: '请输入有效的IP地址', trigger: 'blur' },
   ],
+  credential_id: [{ required: true, message: '请选择或创建 SSH 凭据', trigger: 'change' }],
   device_type: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
+}
+
+// 新建凭据对话框
+const showCredDialog = ref(false)
+const credFormRef = ref<FormInstance>()
+const credSubmitting = ref(false)
+const credForm = reactive({
+  name: '',
+  username: '',
+  password: '',
+  enable_pw: '',
+  description: '',
+})
+const credRules: FormRules = {
+  name: [{ required: true, message: '请输入凭据名称', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}
+
+async function loadCredentials() {
+  loadingCreds.value = true
+  try {
+    const res = await getCredentials()
+    credentials.value = res.data || []
+  } catch {
+    credentials.value = []
+  } finally {
+    loadingCreds.value = false
+  }
+}
+
+async function handleCreateCred() {
+  const valid = await credFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+  credSubmitting.value = true
+  try {
+    const res = await createCredential({
+      name: credForm.name,
+      username: credForm.username,
+      password: credForm.password,
+      enable_pw: credForm.enable_pw,
+      description: credForm.description,
+    })
+    // 将新凭据加入列表并选中
+    credentials.value.push(res.data)
+    form.credential_id = res.data.id
+    ElMessage.success('凭据已创建')
+    showCredDialog.value = false
+    // 重置表单
+    credFormRef.value?.resetFields()
+  } catch {
+    // handled by interceptor
+  } finally {
+    credSubmitting.value = false
+  }
 }
 
 async function loadDevice() {
@@ -133,6 +261,7 @@ async function loadDevice() {
       name: d.name || '',
       management_ip: d.management_ip || '',
       ssh_port: d.ssh_port || 22,
+      credential_id: d.credential_id ?? null,
       device_type: d.device_type || 'hp_comware',
       vendor: d.vendor || 'h3c',
       role: d.role || 'access',
@@ -175,6 +304,25 @@ function handleCancel() {
 }
 
 onMounted(() => {
+  loadCredentials()
   if (isEdit.value) loadDevice()
 })
 </script>
+
+<style scoped>
+.cred-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.cred-name {
+  font-weight: 500;
+  color: #262626;
+}
+.cred-user {
+  font-size: 12px;
+  color: #8c8c8c;
+  font-family: 'JetBrains Mono', monospace;
+}
+</style>
